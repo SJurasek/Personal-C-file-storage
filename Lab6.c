@@ -59,8 +59,8 @@ int main(int argc, char **argv)
 	printPotentialMoves(board, n, 'W');
 	printPotentialMoves(board, n, 'B');
 	
-	int deltaRow, deltaCol;
-	int dRow, dCol;
+	int deltaRow, deltaCol; // Defines direction of line
+	int dRow, dCol; // Total change in position from desired placement of tile (Sorry these are bad names)
 	bool validMove = false;
 	
 	printf("Enter a move:\n");
@@ -74,11 +74,10 @@ int main(int argc, char **argv)
 				if(checkLegalInDirection(board, n, row, col, colour, deltaRow, deltaCol))
 				{
 					// If there is a valid line, for loop flips all consequent tiles up to the position where the colour on the board is the same as the given colour
-					for(dRow = deltaRow, dCol = deltaCol; board[row-'a'+dRow][col-'a'+dCol] != colour; dRow+=deltaRow, dCol+=deltaCol )
+					for(dRow = 0, dCol = 0; board[row-'a'+dRow][col-'a'+dCol] != colour; dRow+=deltaRow, dCol+=deltaCol )
 					{
-						board[row-'a'+dRow][col-'a'+dCol] = colour;
+						board[row-'a'+dRow][col-'a'+dCol] = colour; // Changes chosen tile and concurrent line of opposing colour
 					}
-					board[row-'a'][col-'a'] = colour; // Chosen tile also set to the given colour.
 					validMove = true; // If tiles were flipped, a validMove was made
 				}
 			}
@@ -129,7 +128,6 @@ void printBoard(char board[][26], int n)
 {
 	char row;
 	char col;
-	char letter = 'a';
 	printf("  "); // Whitespace
 	for(col='a'; col<'a'+n; col++)
 	{
@@ -190,5 +188,5 @@ bool checkLegalInDirection(char board[][26], int n, char row, char col, char col
 			flippableColours = true;
 	}
 	
-	return flippableColours && endColour; // If there isnt 
+	return flippableColours && endColour; // If there isnt any opposing tiles found in a line or no terminating tile of same colour this will return false. 
 }
