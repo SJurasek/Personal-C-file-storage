@@ -156,7 +156,7 @@ void printBoard(char board[][26], int n)
 bool positionInBounds(int n, char row, char col)
 {
 	// Make sure given coordinate is >= a and less than 'a'+n
-	return (row - 'a' >= 0 && row - 'a' < n && col - 'a' >= 0 && col - 'a' < n);
+	return ( row - 'a' >= 0 && row - 'a' < n ) && ( col - 'a' >= 0 && col - 'a' < n );
 }
 
 /**
