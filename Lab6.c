@@ -4,16 +4,19 @@
 void printBoard(char board[][26], int n); // Prints board of size n in its current state
 void printPotentialMoves(char board[][26], int n, char colour); // Prints each position that a colour can go that is legal
 bool positionInBounds(int n, char row, char col); // Determines if the given position is within variable board size n
+bool isValidMove(char board[][26], int n, char row, char col, char colour); // Checks if a player's move is legal
 
 // Check if a given placement of a colour is legal in an arbitrary direction
 bool checkLegalInDirection(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol);
 
 int main(int argc, char **argv)
 {
-//	char playerColour;
+	char playerColour;
 	int n;
 	printf("Enter the board dimension: ");
 	scanf("%d", &n); // Assigns board dimension to n
+	printf("Computer plays (B/W): ");
+	scanf("%d", &n);
 	
 	if(n < 4 || n > 26 || n % 2 != 0) // Just making sure the board size is even and within bound
 	{
@@ -24,6 +27,7 @@ int main(int argc, char **argv)
 	
 	char row;
 	char col;
+	char colour;
 	
 	// Initialize board to default starting setup.
 	
@@ -45,28 +49,14 @@ int main(int argc, char **argv)
 	printf("Enter board configuration:\n");
 	row = 'a';
 	col = 'a';
-	char colour;
-	
-	// Keep repeating the same
-	do{
-		scanf(" %c%c%c", &colour, &row, &col); // <colour><row><col>
-		if(positionInBounds(n, row, col) && (colour == 'W' || colour == 'B')) // Check if its an actual placement just in case
-			board[row-'a'][col-'a'] = colour;
-	} while(row != '!' && col != '!' && colour != '!'); // Keep going until user inputs !!!
-	printBoard(board, n);
-	
-	// Print out all possible moves in the current setup for both colours. White first.
-	printPotentialMoves(board, n, 'W');
-	printPotentialMoves(board, n, 'B');
 	
 	int deltaRow, deltaCol; // Defines direction of line
 	int dRow, dCol; // Total change in position from desired placement of tile (Sorry these are bad names)
-	bool validMove = false;
 	
 	printf("Enter a move:\n");
 	scanf(" %c%c%c", &colour, &row, &col); // User inputs where they'd like to move
 	// Make sure it is a possible move. Otherwise invalid move.
-	if(positionInBounds(n, row, col) && (colour == 'W' || colour == 'B') && board[row-'a'][col-'a'] == 'U'){ // If row,col is not a position on the board it wont reach the last condition.
+	if(isValidMove(board, n, row, col, colour)){ // If row,col is not a position on the board it wont reach the last condition.
 		for(deltaRow = -1; deltaRow <= 1; deltaRow++)
 		{
 			for(deltaCol = -1; deltaCol <= 1; deltaCol++) 	// Nested for loops loop through each of the 8 directions that tiles may lay in.
@@ -78,16 +68,13 @@ int main(int argc, char **argv)
 					{
 						board[row-'a'+dRow][col-'a'+dCol] = colour; // Changes chosen tile and concurrent line of opposing colour
 					}
-					validMove = true; // If tiles were flipped, a validMove was made
 				}
 			}
 		}
-	}
-	
-	if(validMove) // Self explanatory
 		printf("Valid move.\n");
-	else
+	} else {
 		printf("Invalid move.\n");
+	}
 	
 	printBoard(board, n);
 	// End Program
@@ -109,11 +96,7 @@ void printPotentialMoves(char board[][26], int n, char colour)
 	{
 		for(col='a'; col<'a'+n; col++) // Nested for loop goes through every position on the board. Starts at earliest row, goes through each column starting at 'a', then goes to next row.
 		{
-			if( board[row-'a'][col-'a'] == 'U' /* Is the position unoccupied? */
-			&& (checkLegalInDirection(board, n, row, col, colour, -1, -1) || checkLegalInDirection(board, n, row, col, colour, 0, -1)
-			|| checkLegalInDirection(board, n, row, col, colour, 1, -1) || checkLegalInDirection(board, n, row, col, colour, -1, 0)
-			|| checkLegalInDirection(board, n, row, col, colour, 1, 0) || checkLegalInDirection(board, n, row, col, colour, -1, 1)
-			|| checkLegalInDirection(board, n, row, col, colour, 0, 1) || checkLegalInDirection(board, n, row, col, colour, 1, 1) )) // Hardcode if theres a legal move for any direction.
+			if( board[row-'a'][col-'a'] == 'U' && isValidMove(board, n, row, col, colour)) // Hardcode if theres a legal move for any direction.
 				printf("%c%c\n", row, col);
 		}
 	}
@@ -157,6 +140,30 @@ bool positionInBounds(int n, char row, char col)
 {
 	// Make sure given coordinate is >= a and less than 'a'+n
 	return ( row - 'a' >= 0 && row - 'a' < n ) && ( col - 'a' >= 0 && col - 'a' < n );
+}
+
+/**
+ * @brief Returns true if the user given colour, row, and col produce a legal move on the board of size n. Returns false otherwise.
+ * @param board
+ * @param n
+ * @param row
+ * @param col
+ * @param colour
+ * @return 
+ */
+bool isValidMove(char board[][26], int n, char row, char col, char colour)
+{
+	int deltaRow, deltaCol;
+	
+	if( (colour == 'W' || colour == 'B') && positionInBounds(n, row, col) && board[row-'a'][col-'a'] == 'U'){
+		for(deltaRow = -1; deltaRow <= 1; deltaRow++){
+			for(deltaCol = -1; deltaCol <= 1; deltaCol++){
+				if(checkLegalInDirection(board, n, row, col, colour, deltaRow, deltaCol))
+					return true;
+			}
+		}
+	}
+	return false;
 }
 
 /**
