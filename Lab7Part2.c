@@ -3,15 +3,18 @@
 #include "lab7part2lib.h"
 
 bool initBoard(char board[][26], int *pSize, char *pCompColour); // Prompts user and initializes board and computer's colour
+char findOpposite(char colour); // Finds opposite player colour
+void copyBoard(char initialBoard[][26], char boardCopy[][26], int n); // Copys a board of size n to another 2d array, maintaining size n.
 void printBoard(char board[][26], int n); // Prints board of size n in its current state
 bool positionInBounds(int n, int row, int col); // Determines if the given position is within variable board size n
 bool isValidMove(char board[][26], int n, int row, int col, char colour); // Checks if a player's move is legal
 bool arePotentialMoves(char board[][26], int n, char colour); // Checks if there is an available move for a colour.
 bool checkLegalInDirection(char board[][26], int n, int row, int col, char colour, int deltaRow, int deltaCol); // Check if a given placement of a colour is legal in an arbitrary direction
 char greaterColour(char board[][26], int n); // Checks which colour occurs more often on the board.
-void moveCalculator(char board[][26], int n, int *pRow, int *pCol, char colour); // Calculates the optimal position for the computer to move
+void moveCalculator(char board[][26], int n, int *pRow, int *pCol, char colour, int turnDepth); // Calculates the optimal position for the computer to move
 int checkValidAndFlip(char board[][26], int row, int col, char colour, int n, bool flip); // Calculates the number of tiles that can be flipped
-int scoreCalculator(char board[][26], int n, int row, int col, char colour); // Calculates score for a tile
+int scoreCalculator(char board[][26], int n, int row, int col, char colour, int turnDepth); // Calculates score for a tile
+int availableMoves(char board[][26], int n, char colour); // Calculates number of available moves 
 
 int main(int argc, char **argv)
 {
@@ -50,7 +53,7 @@ int main(int argc, char **argv)
 		}else{
 			if(arePotentialMoves(board, n, cComp)){
 				// Put in computer calculations
-				moveCalculator(board, n, &row, &col, cComp);
+				moveCalculator(board, n, &row, &col, cComp, 10);
 				checkValidAndFlip(board, row, col, cComp, n, true);
 				
 				printf("Computer places %c at %c%c.\n", cComp, row + 'a', col + 'a');
@@ -112,6 +115,28 @@ bool initBoard(char board[][26], int *pSize, char *pCompColour){
 		return false;
 	}else{
 		return true;
+	}
+}
+
+char findOpposite(char colour){
+	if(colour == 'B')
+		return 'W';
+	else
+		return 'B';
+}
+
+/**
+ * @brief Copies values of initialBoard to boardCopy
+ * @param initialBoard
+ * @param boardCopy
+ * @param n
+ */
+void copyBoard(char initialBoard[][26], char boardCopy[][26], int n){
+	int row,col;
+	for(row=0; row<n; row++){
+		for(col=0; col<n; col++){
+			boardCopy[row][col] = initialBoard[row][col];
+		}
 	}
 }
 
@@ -264,14 +289,14 @@ char greaterColour(char board[][26], int n)
  * @param pCol
  * @param colour
  */
-void moveCalculator(char board[][26], int n, int *pRow, int *pCol, char colour){
+void moveCalculator(char board[][26], int n, int *pRow, int *pCol, char colour, int turnDepth){
 	int highScore = 0;
 	int tempScore;
 	
 	int row,col;
 	for(row=0; row< n; row++){
 		for(col=0; col< n; col++){
-			tempScore = checkValidAndFlip(board, row, col, colour, n, false);
+			tempScore = scoreCalculator(board, n, row, col, colour, turnDepth);
 			if(tempScore > highScore){
 				*pRow = row;
 				*pCol = col;
@@ -316,11 +341,43 @@ int checkValidAndFlip(char board[][26], int row, int col, char colour, int n, bo
 	return numOfFlippableTiles;
 }
 
-int scoreCalculator(char board[][26], int n, int row, int col, char colour){
+int scoreCalculator(char board[][26], int n, int row, int col, char colour, int turnDepth){
 	// Factors that affect score:
 	// Number of flips for a move
 	// Is the move on a corner/wall
-	// 
+	// Number of available moves opponent has
+	// Anticipating where opponent will play
+	// Plan multiple moves into the future
+
+	char boardCopy[26][26];
+	copyBoard(board, boardCopy, n);
+	checkValidAndFlip(boardCopy, row, col, colour, n, true);
+
+	int score = 2 * checkValidAndFlip(board, row, col, colour, n, false);
+	score += 1000 * ( (row == 0 || row == n-1) && (col == 0 || col == n-1));
+	score += 10 * (row==0 || row==n-1 || col==0 || row==n-1);
+	score += 5 * (availableMoves(boardCopy, n, colour) - availableMoves(board, n, colour));
+	// Relatively simple computer program. Needs testing. THIS IS NOT MINIMAX
 	
-	return 0;
+	return score;
+}
+
+/**
+ * @brief Returns number of available moves for a certain colour
+ * @param board
+ * @param n
+ * @param colour
+ * @return 
+ */
+int availableMoves(char board[][26], int n, char colour){
+	int row,col;
+	int numOfMoves = 0;
+	
+	for(row=0; row<n; row++){
+		for(col=0; col<n; col++){
+			if(isValidMove(board, n, row, col, colour))
+				numOfMoves++;
+		}
+	}
+	return numOfMoves;
 }
