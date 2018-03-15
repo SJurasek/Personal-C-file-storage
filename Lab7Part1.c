@@ -1,104 +1,119 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+bool initBoard(char board[][26], int *pSize, char *pCompColour); // Prompts user and initializes board and computer's colour
 void printBoard(char board[][26], int n); // Prints board of size n in its current state
-void printPotentialMoves(char board[][26], int n, char colour); // Prints each position that a colour can go that is legal
 bool positionInBounds(int n, char row, char col); // Determines if the given position is within variable board size n
 bool isValidMove(char board[][26], int n, char row, char col, char colour); // Checks if a player's move is legal
-
-// Check if a given placement of a colour is legal in an arbitrary direction
-bool checkLegalInDirection(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol);
+bool arePotentialMoves(char board[][26], int n, char colour); // Checks if there is an available move for a colour.
+bool checkLegalInDirection(char board[][26], int n, char row, char col, char colour, int deltaRow, int deltaCol); // Check if a given placement of a colour is legal in an arbitrary direction
+char greaterColour(char board[][26], int n); // Checks which colour occurs more often on the board.
+void moveCalculator(char board[][26], int n, char *pRow, char *pCol, char colour); // Calculates the optimal position for the computer to move
+int checkValidAndFlip(char board[][26], int row, int col, char colour, int n, bool flip); // Calculates the number of tiles that can be flipped
 
 int main(int argc, char **argv)
 {
-	char playerColour;
+	char cPlay, cComp, row, col; // Colour of player, colour of computer; row and column values.
+	bool isPlayerMove;
 	int n;
-	printf("Enter the board dimension: ");
-	scanf("%d", &n); // Assigns board dimension to n
-	printf("Computer plays (B/W): ");
-	scanf("%d", &n);
 	
-	if(n < 4 || n > 26 || n % 2 != 0) // Just making sure the board size is even and within bound
-	{
-		printf("Invalid board size.\n");
+	static char board[26][26];
+	if(!initBoard(board, &n, &cComp)){
 		return 0;
 	}
-	static char board[26][26];
 	
-	char row;
-	char col;
-	char colour;
-	
-	// Initialize board to default starting setup.
-	
-	for(row = 'a'; row < 'a'+ n; row++)
-	{
-		for(col = 'a'; col < 'a'+ n; col++)
-		{
-			// Conditions set the 2x2 checker pattern at the center of the board
-			if((row - 'a' == n/2 && col - 'a' == n/2) || (row - 'a' == n/2 - 1 && col - 'a' == n/2 - 1))
-				board[row-'a'][col-'a'] = 'W';
-			else if((row-'a' == n/2 && col-'a' == n/2 - 1) || (row-'a' == n/2 - 1 && col-'a' == n/2))
-				board[row-'a'][col-'a'] = 'B';
-			else
-				board[row-'a'][col-'a'] = 'U'; // All other spaces are "unnoccupied"
-		}
+	// Set up who is what colour, and that whoever is 'B' starts first.
+	if(cComp == 'W'){
+		cPlay = 'B';
+		isPlayerMove = true;
+	}else{ // cComp == 'B'
+		cPlay = 'W';
+		isPlayerMove = false;
 	}
+	
 	printBoard(board, n);
 	
-	printf("Enter board configuration:\n");
-	row = 'a';
-	col = 'a';
-	
-	int deltaRow, deltaCol; // Defines direction of line
-	int dRow, dCol; // Total change in position from desired placement of tile (Sorry these are bad names)
-	
-	printf("Enter a move:\n");
-	scanf(" %c%c%c", &colour, &row, &col); // User inputs where they'd like to move
-	// Make sure it is a possible move. Otherwise invalid move.
-	if(isValidMove(board, n, row, col, colour)){ // If row,col is not a position on the board it wont reach the last condition.
-		for(deltaRow = -1; deltaRow <= 1; deltaRow++)
-		{
-			for(deltaCol = -1; deltaCol <= 1; deltaCol++) 	// Nested for loops loop through each of the 8 directions that tiles may lay in.
-			{												// When deltaRow and deltaCol both equal 0, checkLegalInDirection will return false.
-				if(checkLegalInDirection(board, n, row, col, colour, deltaRow, deltaCol))
-				{
-					// If there is a valid line, for loop flips all consequent tiles up to the position where the colour on the board is the same as the given colour
-					for(dRow = 0, dCol = 0; board[row-'a'+dRow][col-'a'+dCol] != colour; dRow+=deltaRow, dCol+=deltaCol )
-					{
-						board[row-'a'+dRow][col-'a'+dCol] = colour; // Changes chosen tile and concurrent line of opposing colour
-					}
+	while( arePotentialMoves(board, n, cPlay) || arePotentialMoves(board, n, cComp) ){
+		
+		if(isPlayerMove){
+			if(arePotentialMoves(board, n, cPlay)){
+				printf("Enter a move for colour %c (RowCol): ", cPlay);
+				scanf(" %c%c", &row, &col); // User inputs where they'd like to move
+				
+				// Check if the number of tiles flipped is 0 (Implies invalid move). Otherwise it flips tiles.
+				if(checkValidAndFlip(board, row, col, cPlay, n, true) == 0){
+					printf("Invalid move.\n%c player wins.\n", cComp);
+					return 0;
 				}
+				
+			}else{
+				printf("%c player has no move.\n", cPlay);
+			}
+		}else{
+			if(arePotentialMoves(board, n, cComp)){
+				// Put in computer calculations
+				moveCalculator(board, n, &row, &col, cComp);
+				checkValidAndFlip(board, row, col, cComp, n, true);
+				
+				printf("Computer places %c at %c%c.\n", cComp, row, col);
+			}else{
+				printf("%c player has no move.\n", cComp);
 			}
 		}
-		printf("Valid move.\n");
-	} else {
-		printf("Invalid move.\n");
+		
+		printBoard(board, n);
+		isPlayerMove = !isPlayerMove;
 	}
 	
-	printBoard(board, n);
+	char winner = greaterColour(board, n);
+	if(winner == 'D')
+		printf("Draw!\n");
+	else
+		printf("%c player wins.\n", winner);
 	// End Program
 	return 0;
 }
 
 /**
- * @brief Prints out any and all possible moves for a certain colour (i.e. Places on the board where tiles will be flipped in any direction).
+ * @brief Returns an initialized board and board size. Returns false if user input is invalid, true if otherwise.
  * @param board
- * @param n
- * @param colour
+ * @param pSize
  */
-void printPotentialMoves(char board[][26], int n, char colour)
-{
-	int row;
-	int col;
-	printf("Available moves for %c:\n", colour);
-	for(row='a'; row < 'a'+n; row++)
+bool initBoard(char board[][26], int *pSize, char *pCompColour){
+	printf("Enter the board dimension: ");
+	scanf("%d", pSize); // Assigns board dimension to n
+	
+	if(*pSize < 4 || *pSize > 26 || *pSize % 2 != 0){ // Just making sure the board size is even and within bound
+		printf("Invalid board size.\n");
+		return false;
+	}
+	
+	char row, col;
+	
+	// Initialize board to default starting setup.
+	
+	for(row = 'a'; row < 'a'+ *pSize; row++)
 	{
-		for(col='a'; col<'a'+n; col++) // Nested for loop goes through every position on the board. Starts at earliest row, goes through each column starting at 'a', then goes to next row.
+		for(col = 'a'; col < 'a'+ *pSize; col++)
 		{
-			if( board[row-'a'][col-'a'] == 'U' && isValidMove(board, n, row, col, colour)) // Hardcode if theres a legal move for any direction.
-				printf("%c%c\n", row, col);
+			// Conditions set the 2x2 checker pattern at the center of the board
+			if((row - 'a' == *pSize/2 && col - 'a' == *pSize/2) || (row - 'a' == *pSize/2 - 1 && col - 'a' == *pSize/2 - 1))
+				board[row-'a'][col-'a'] = 'W';
+			else if((row-'a' == *pSize/2 && col-'a' == *pSize/2 - 1) || (row-'a' == *pSize/2 - 1 && col-'a' == *pSize/2))
+				board[row-'a'][col-'a'] = 'B';
+			else
+				board[row-'a'][col-'a'] = '.'; // All other spaces are "unnoccupied"
 		}
+	}
+	
+	printf("Computer plays (B/W): ");
+	scanf(" %c", pCompColour);
+	
+	if(*pCompColour != 'B' && *pCompColour != 'W'){
+		printf("Invalid player colour.\n");
+		return false;
+	}else{
+		return true;
 	}
 }
 
@@ -155,12 +170,31 @@ bool isValidMove(char board[][26], int n, char row, char col, char colour)
 {
 	int deltaRow, deltaCol;
 	
-	if( (colour == 'W' || colour == 'B') && positionInBounds(n, row, col) && board[row-'a'][col-'a'] == 'U'){
+	if( (colour == 'W' || colour == 'B') && positionInBounds(n, row, col) && board[row-'a'][col-'a'] == '.'){
 		for(deltaRow = -1; deltaRow <= 1; deltaRow++){
 			for(deltaCol = -1; deltaCol <= 1; deltaCol++){
 				if(checkLegalInDirection(board, n, row, col, colour, deltaRow, deltaCol))
 					return true;
 			}
+		}
+	}
+	return false;
+}
+
+/**
+ * @brief Returns true if the given colour has available moves on the board. Returns false if not.
+ * @param board
+ * @param n
+ * @param colour
+ * @return 
+ */
+bool arePotentialMoves(char board[][26], int n, char colour)
+{
+	char row, col;
+	for(row = 'a'; row < 'a'+n; row++){
+		for(col = 'a'; col < 'a'+n; col++){
+			if(isValidMove(board, n, row, col, colour))
+				return true;
 		}
 	}
 	return false;
@@ -189,11 +223,98 @@ bool checkLegalInDirection(char board[][26], int n, char row, char col, char col
 	{
 		if(colour == board[row-'a'+dRow][col-'a'+dCol]) //If the next tile is of similar colour
 			endColour = true;
-		else if(board[row-'a'+dRow][col-'a'+dCol] == 'U' && !endColour) // return false if there is a space before the line is terminated
+		else if(board[row-'a'+dRow][col-'a'+dCol] == '.' && !endColour) // return false if there is a space before the line is terminated
 			return false;
-		else if(colour != board[row-'a'+dRow][col-'a'+dCol] && !endColour && board[row-'a'+dRow][col-'a'+dCol] != 'U') //If next tile is opposing colour and line has not been terminated yet
+		else if(colour != board[row-'a'+dRow][col-'a'+dCol] && !endColour && board[row-'a'+dRow][col-'a'+dCol] != '.') //If next tile is opposing colour and line has not been terminated yet
 			flippableColours = true;
 	}
 	
 	return flippableColours && endColour; // If there isnt any opposing tiles found in a line or no terminating tile of same colour this will return false. 
+}
+
+/**
+ * @brief Returns 'B' or 'W' depending on which one occurs more on the board. Returns 'D' if there is a tie.
+ * @param board
+ * @param n
+ * @return 
+ */
+char greaterColour(char board[][26], int n)
+{
+	char row, col;
+	int difference = 0; // Termining difference between num of Ws and num of Bs (Positive favors W)
+	for(row = 'a'; row < 'a'+n; row++){
+		for(col = 'a'; col < 'a'+n; col++){
+			if(board[row-'a'][col-'a'] == 'W')
+				difference++;
+			else if(board[row-'a'][col-'a'] == 'B')
+				difference--;
+		}
+	}
+	// Use the difference to determine which colour appears more often
+	if(difference > 0)
+		return 'W';
+	else if(difference < 0)
+		return 'B';
+	else
+		return 'D';
+}
+
+/**
+ * @brief Returns the desired row and col for the colour to move.
+ * @param board
+ * @param n
+ * @param pRow
+ * @param pCol
+ * @param colour
+ */
+void moveCalculator(char board[][26], int n, char *pRow, char *pCol, char colour){
+	int highScore = 0;
+	int tempScore;
+	
+	char row,col;
+	for(row='a'; row< 'a'+n; row++){
+		for(col='a'; col< 'a'+n; col++){
+			tempScore = checkValidAndFlip(board, row, col, colour, n, false);
+			if(tempScore > highScore){
+				*pRow = row;
+				*pCol = col;
+				highScore = tempScore;
+			}
+		}
+	}
+}
+
+/**
+ * @brief Determines if a move is valid and returns the number of tiles flipped to a colour if its a valid move. Flips the tiles if flip is true.
+ * @param board
+ * @param row
+ * @param col
+ * @param colour
+ * @param n
+ * @param flip
+ * @return 
+ */
+int checkValidAndFlip(char board[][26], int row, int col, char colour, int n, bool flip){
+	int numOfFlippableTiles = 0; // Tile counter
+	
+	if(isValidMove(board, n, row, col, colour)){
+		if(flip)
+			board[row-'a'][col-'a'] = colour;
+		
+		int deltaRow, deltaCol, dRow, dCol;
+		// Same loops for actually flipping tiles in main().
+		for(deltaRow = -1; deltaRow <= 1; deltaRow++){
+			for(deltaCol = -1; deltaCol <= 1; deltaCol++){
+				if(checkLegalInDirection(board, n, row, col, colour, deltaRow, deltaCol)){
+					for(dRow = deltaRow, dCol = deltaCol; board[row-'a'+dRow][col-'a'+dCol] != colour; dRow+=deltaRow, dCol+=deltaCol ){
+							numOfFlippableTiles++; // Increment by 1 each time a tile is "turned"
+							if(flip)
+								board[row-'a'+dRow][col-'a'+dCol] = colour;
+					}
+				}
+			}
+		}
+	}
+		
+	return numOfFlippableTiles;
 }
