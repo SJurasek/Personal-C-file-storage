@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include "lab7part2lib.h"
 
 bool initBoard(char board[][26], int *pSize, char *pCompColour); // Prompts user and initializes board and computer's colour
@@ -13,7 +15,7 @@ bool checkLegalInDirection(char board[][26], int n, int row, int col, char colou
 char greaterColour(char board[][26], int n); // Checks which colour occurs more often on the board.
 void moveCalculator(char board[][26], int n, int *pRow, int *pCol, char colour, int turnDepth); // Calculates the optimal position for the computer to move
 int checkValidAndFlip(char board[][26], int row, int col, char colour, int n, bool flip); // Calculates the number of tiles that can be flipped
-int scoreCalculator(char board[][26], int n, int row, int col, char colour, int turnDepth); // Calculates score for a tile
+int scoreCalculator(char board[][26], char boardCopy[][26], int n, int row, int col, char colour, int turnDepth); // Calculates score for a tile
 int availableMoves(char board[][26], int n, char colour); // Calculates number of available moves 
 
 int main(int argc, char **argv)
@@ -38,32 +40,51 @@ int main(int argc, char **argv)
 	
 	printBoard(board, n);
 	
-	while( arePotentialMoves(board, n, cPlay) || arePotentialMoves(board, n, cComp) ){
+	struct rusage usage; // a structure to hold "resource usage" (including time)
+	struct timeval start, end; // will hold the start and end times
+	getrusage(RUSAGE_SELF, &usage);
+	start = usage.ru_utime;
+	double timeStart = start.tv_sec + start.tv_usec / 1000000.0; // in seconds
+	
+	bool playerPotential = true;
+	bool computerPotential = true;
+	
+	while( playerPotential || computerPotential ){
 		
 		if(isPlayerMove){
-			if(arePotentialMoves(board, n, cPlay)){
+			if(playerPotential){
 				// Put in smart move stuff
 				findSmarterMove(board, n, cPlay, &row, &col);
 				checkValidAndFlip(board, row, col, cPlay, n, true);
 				
 				printf("Testing AI move (row, col): %c%c\n", row + 'a', col + 'a');
+				
+				printBoard(board, n);
 			}else{
-				printf("%c player has no move.\n", cPlay);
+				printf("%c player has no valid move.\n", cPlay);
 			}
 		}else{
-			if(arePotentialMoves(board, n, cComp)){
+			if(computerPotential){
 				// Put in computer calculations
 				moveCalculator(board, n, &row, &col, cComp, 10);
-				checkValidAndFlip(board, row, col, cComp, n, true);
 				
 				printf("Computer places %c at %c%c.\n", cComp, row + 'a', col + 'a');
+				
+				if(checkValidAndFlip(board, row, col, cComp, n, true) == 0){
+					printf("Invalid move.\n%c player wins.\n", cPlay);
+					return 0;
+				}
+				
+				printBoard(board, n);
 			}else{
-				printf("%c player has no move.\n", cComp);
+				printf("%c player has no valid move.\n", cComp);
 			}
 		}
 		
-		printBoard(board, n);
 		isPlayerMove = !isPlayerMove;
+		
+		playerPotential = arePotentialMoves(board, n, cPlay);
+		computerPotential = arePotentialMoves(board, n, cComp);
 	}
 	
 	char winner = greaterColour(board, n);
@@ -72,6 +93,14 @@ int main(int argc, char **argv)
 	else
 		printf("%c player wins.\n", winner);
 	// End Program
+	
+	getrusage(RUSAGE_SELF, &usage);
+	end = usage.ru_utime;
+	double timeEnd = end.tv_sec + end.tv_usec / 1000000.0; // in seconds
+	double totalTime = timeEnd - timeStart;
+	// totalTime now holds the time (in seconds) it takes to run your code
+	printf("Total time: %lf\n", totalTime);
+	
 	return 0;
 }
 
@@ -103,7 +132,7 @@ bool initBoard(char board[][26], int *pSize, char *pCompColour){
 			else if((row == *pSize/2 && col == *pSize/2 - 1) || (row == *pSize/2 - 1 && col == *pSize/2))
 				board[row][col] = 'B';
 			else
-				board[row][col] = '.'; // All other spaces are "unnoccupied"
+				board[row][col] = 'U'; // All other spaces are "unnoccupied"
 		}
 	}
 	
@@ -192,7 +221,7 @@ bool isValidMove(char board[][26], int n, int row, int col, char colour)
 {
 	int deltaRow, deltaCol;
 	
-	if( (colour == 'W' || colour == 'B') && positionInBounds(n, row, col) && board[row][col] == '.'){
+	if( (colour == 'W' || colour == 'B') && positionInBounds(n, row, col) && board[row][col] == 'U'){
 		for(deltaRow = -1; deltaRow <= 1; deltaRow++){
 			for(deltaCol = -1; deltaCol <= 1; deltaCol++){
 				if(checkLegalInDirection(board, n, row, col, colour, deltaRow, deltaCol))
@@ -245,9 +274,9 @@ bool checkLegalInDirection(char board[][26], int n, int row, int col, char colou
 	{
 		if(colour == board[row+dRow][col+dCol]) //If the next tile is of similar colour
 			endColour = true;
-		else if(board[row+dRow][col+dCol] == '.' && !endColour) // return false if there is a space before the line is terminated
+		else if(board[row+dRow][col+dCol] == 'U' && !endColour) // return false if there is a space before the line is terminated
 			return false;
-		else if(colour != board[row+dRow][col+dCol] && !endColour && board[row+dRow][col+dCol] != '.') //If next tile is opposing colour and line has not been terminated yet
+		else if(colour != board[row+dRow][col+dCol] && !endColour && board[row+dRow][col+dCol] != 'U') //If next tile is opposing colour and line has not been terminated yet
 			flippableColours = true;
 	}
 	
@@ -292,15 +321,19 @@ char greaterColour(char board[][26], int n)
 void moveCalculator(char board[][26], int n, int *pRow, int *pCol, char colour, int turnDepth){
 	int highScore = 0;
 	int tempScore;
+	// Loop only to go through valid moves
+	char boardCopy[26][26];
 	
 	int row,col;
 	for(row=0; row< n; row++){
 		for(col=0; col< n; col++){
-			tempScore = scoreCalculator(board, n, row, col, colour, turnDepth);
-			if(tempScore > highScore){
-				*pRow = row;
-				*pCol = col;
-				highScore = tempScore;
+			if(isValidMove(board, n, row, col, colour)){
+				tempScore = scoreCalculator(board, boardCopy, n, row, col, colour, turnDepth);
+				if(tempScore > highScore){
+					*pRow = row;
+					*pCol = col;
+					highScore = tempScore;
+				}
 			}
 		}
 	}
@@ -341,22 +374,27 @@ int checkValidAndFlip(char board[][26], int row, int col, char colour, int n, bo
 	return numOfFlippableTiles;
 }
 
-int scoreCalculator(char board[][26], int n, int row, int col, char colour, int turnDepth){
+int scoreCalculator(char board[][26], char boardCopy[][26], int n, int row, int col, char colour, int turnDepth){
 	// Factors that affect score:
 	// Number of flips for a move
 	// Is the move on a corner/wall
 	// Number of available moves opponent has
 	// Anticipating where opponent will play
 	// Plan multiple moves into the future
-
-	char boardCopy[26][26];
 	copyBoard(board, boardCopy, n);
-	checkValidAndFlip(boardCopy, row, col, colour, n, true);
+	if(checkValidAndFlip(boardCopy, row, col, colour, n, true) == 0)
+		return 0;
+
+	int changeInMoves = ;
 
 	int score = 2 * checkValidAndFlip(board, row, col, colour, n, false);
 	score += 1000 * ( (row == 0 || row == n-1) && (col == 0 || col == n-1));
+	score += 2000 * ( availableMoves(boardCopy, n, findOpposite(colour)) == 0 );
 	score += 10 * (row==0 || row==n-1 || col==0 || row==n-1);
-	score += 5 * (availableMoves(boardCopy, n, colour) - availableMoves(board, n, colour));
+	score += 5 * (availableMoves(boardCopy, n, findOpposite(colour)) - availableMoves(board, n, findOpposite(colour)));
+	
+	if(score < 0)
+		score = 1;
 	// Relatively simple computer program. Needs testing. THIS IS NOT MINIMAX
 	
 	return score;
