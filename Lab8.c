@@ -185,7 +185,7 @@ bool isAlphabeticallyBefore(char s1[], char s2[]){
 	return true;
 }
 
-bool isSongInList(Node* list, char songName[]){
+bool isSongInList(Node* list, char *songName){
 	Node* currentNode = list;
 	while(currentNode != NULL){
 		if(strcmp(songName, list->songName) == 0)
@@ -204,28 +204,39 @@ bool isSongInList(Node* list, char songName[]){
  * @return 
  */
 Node* insertIntoOrderedList(Node* list){
-	Node *newSong = NULL;
+	Node *newSong = (Node *)malloc(sizeof(Node));
 	char *promptName = "Song name" ;
 	char *promptArtist =  "Artist" ;
 	char *promptGenre = "Genre" ;
 	
-	char *songName = (char *)malloc( (MAX_LENGTH+1)*sizeof(char) );
-	char *artist = (char *)malloc( (MAX_LENGTH+1)*sizeof(char) );
-	char *genre = (char *)malloc( (MAX_LENGTH+1)*sizeof(char) );
-	inputStringFromUser(promptName, songName, MAX_LENGTH);
-	inputStringFromUser(promptArtist, artist, MAX_LENGTH);
-	//inputStringFromUser(promptGenre, genre, MAX_LENGTH);
+	char tempString[MAX_LENGTH+1];
+	inputStringFromUser(promptName, tempString, MAX_LENGTH);
+	newSong->songName = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
+	strcpy(newSong->songName, tempString);
 	
-	if(isSongInList(list, songName)){
-		songNameDuplicate(songName);
+	inputStringFromUser(promptArtist, tempString, MAX_LENGTH);
+	newSong->artist = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
+	strcpy(newSong->artist, tempString);
+	
+	inputStringFromUser(promptGenre, tempString, MAX_LENGTH);
+	newSong->genre = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
+	strcpy(newSong->genre, tempString);
+	
+	newSong->nextNode = NULL;
+	
+	if(isSongInList(list, newSong->songName)){
+		songNameDuplicate(newSong->songName);
+		free(newSong->songName);
+		free(newSong->artist);
+		free(newSong->genre);
+		free(newSong);
 		return list;
-	} else {
-		newSong = newNode(NULL, songName, artist, genre);
 	}
 	
 	if(list == NULL){
 		return newSong;
 	}else if(list->nextNode == NULL){
+		printf("\nBecause\n");
 		if(isAlphabeticallyBefore(newSong->songName, list->songName)){
 			newSong->nextNode = list;
 			return newSong;
@@ -234,6 +245,7 @@ Node* insertIntoOrderedList(Node* list){
 			return list;
 		}
 	} else {
+		printf("\nWhy is it crashing\n");
 		Node *temp = list;
 		while(temp->nextNode != NULL) {
 			if(isAlphabeticallyBefore(newSong->songName, temp->nextNode->songName)){
@@ -247,6 +259,7 @@ Node* insertIntoOrderedList(Node* list){
 		return list;
 	}
 }
+
 
 /**
  * @brief Deletes the node with songName in the list and frees all data in it.
