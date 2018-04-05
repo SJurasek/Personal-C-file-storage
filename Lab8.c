@@ -236,7 +236,6 @@ Node* insertIntoOrderedList(Node* list){
 	if(list == NULL){
 		return newSong;
 	}else if(list->nextNode == NULL){
-		printf("\nBecause\n");
 		if(isAlphabeticallyBefore(newSong->songName, list->songName)){
 			newSong->nextNode = list;
 			return newSong;
@@ -245,7 +244,6 @@ Node* insertIntoOrderedList(Node* list){
 			return list;
 		}
 	} else {
-		printf("\nWhy is it crashing\n");
 		Node *temp = list;
 		while(temp->nextNode != NULL) {
 			if(isAlphabeticallyBefore(newSong->songName, temp->nextNode->songName)){
