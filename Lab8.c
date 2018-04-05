@@ -220,14 +220,6 @@ Node* insertIntoOrderedList(Node* list){
 	
 	if(list == NULL){
 		return newSong;
-	}else if(list->nextNode == NULL){
-		if(strcmp(newSong->songName, list->songName) < 0){
-			newSong->nextNode = list;
-			return newSong;
-		}else{
-			list->nextNode = newSong;
-			return list;
-		}
 	} else {
 		Node *previous = NULL;
 		Node *temp = list;
@@ -245,7 +237,7 @@ Node* insertIntoOrderedList(Node* list){
 			previous = temp;
 			temp = temp->nextNode;
 		}
-		temp->nextNode = newSong;
+		previous->nextNode = newSong;
 		return list;
 	}
 }
