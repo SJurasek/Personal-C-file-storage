@@ -29,14 +29,12 @@ typedef struct node {
 
 // Declarations of linked list functions
 
-bool isAlphabeticallyBefore(char *s1, char *s2);
 bool isSongInList(Node* list, char *songName);
 Node* insertIntoOrderedList(Node* list);
 Node* deleteNode(Node* list, char *songName);
 Node* deleteList(Node* list);
 Node* newNode(Node* nextNode, char* songName, char *artist, char *genre);
 Node* findNodeByName(Node *list, char *songName);
-void printOutSong(char *songName, char *artist, char *genre);
 void printSearchedSong(Node* list, char *songName);
 void printList(Node* list);
 
@@ -174,17 +172,6 @@ void printMusicLibraryTitle(void) {
 
 // Add your functions below this line.
 
-bool isAlphabeticallyBefore(char s1[], char s2[]){
-	int i;
-	for(i=0; s1[i] != '\0'; i++) {
-		if(s2[i] == '\0' || toupper(s1[i]) > toupper(s2[i]) )
-			return false;
-		else if(toupper(s1[i]) < toupper(s2[i]))
-			return true;
-	}
-	return true;
-}
-
 bool isSongInList(Node* list, char *songName){
 	Node* currentNode = list;
 	while(currentNode != NULL){
@@ -210,15 +197,15 @@ Node* insertIntoOrderedList(Node* list){
 	char *promptGenre = "Genre" ;
 	
 	char tempString[MAX_LENGTH+1];
-	inputStringFromUser(promptName, tempString, MAX_LENGTH);
+	inputStringFromUser("Song name", tempString, MAX_LENGTH);
 	newSong->songName = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
 	strcpy(newSong->songName, tempString);
 	
-	inputStringFromUser(promptArtist, tempString, MAX_LENGTH);
+	inputStringFromUser("Artist", tempString, MAX_LENGTH);
 	newSong->artist = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
 	strcpy(newSong->artist, tempString);
 	
-	inputStringFromUser(promptGenre, tempString, MAX_LENGTH);
+	inputStringFromUser("Genre", tempString, MAX_LENGTH);
 	newSong->genre = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
 	strcpy(newSong->genre, tempString);
 	
@@ -236,7 +223,7 @@ Node* insertIntoOrderedList(Node* list){
 	if(list == NULL){
 		return newSong;
 	}else if(list->nextNode == NULL){
-		if(isAlphabeticallyBefore(newSong->songName, list->songName)){
+		if(strcmp(newSong->songName, list->songName) < 0){
 			newSong->nextNode = list;
 			return newSong;
 		}else{
@@ -246,7 +233,7 @@ Node* insertIntoOrderedList(Node* list){
 	} else {
 		Node *temp = list;
 		while(temp->nextNode != NULL) {
-			if(isAlphabeticallyBefore(newSong->songName, temp->nextNode->songName)){
+			if(strcmp(newSong->songName, temp->nextNode->songName) < 0){
 				newSong->nextNode = temp->nextNode;
 				temp->nextNode = newSong;
 				return list;
@@ -327,15 +314,11 @@ Node* findNodeByName(Node *list, char *songName){
 	return currentNode; // points to NULL if it reaches this point
 }
 
-void printOutSong(char *songName, char *artist, char *genre){
-	printf("\n%s\n%s\n%s\n", songName, artist, genre);
-}
-
 void printSearchedSong(Node* list, char *songName){
 	Node *song = findNodeByName(list, songName);
 	if(song != NULL){
 		songNameFound(songName);
-		printOutSong(song->songName, song->artist, song->genre);
+		printf("\n%s\n%s\n%s\n", song->songName, song->artist, song->genre);
 	}else{
 		songNameNotFound(songName);
 	}
@@ -347,7 +330,7 @@ void printList(Node* list){
 		Node *currentNode = list;
 		
 		while(currentNode != NULL){
-			printOutSong(currentNode->songName, currentNode->artist, currentNode->genre);
+			printf("\n%s\n%s\n%s\n", currentNode->songName, currentNode->artist, currentNode->genre);
 			currentNode = currentNode->nextNode;
 		}
 	} else {
