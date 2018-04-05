@@ -192,9 +192,6 @@ bool isSongInList(Node* list, char *songName){
  */
 Node* insertIntoOrderedList(Node* list){
 	Node *newSong = (Node *)malloc(sizeof(Node));
-	char *promptName = "Song name" ;
-	char *promptArtist =  "Artist" ;
-	char *promptGenre = "Genre" ;
 	
 	char tempString[MAX_LENGTH+1];
 	inputStringFromUser("Song name", tempString, MAX_LENGTH);
@@ -211,6 +208,7 @@ Node* insertIntoOrderedList(Node* list){
 	
 	newSong->nextNode = NULL;
 	
+	// I could have put all string initializations wrapped in the if statement so I wouldnt need to use free().
 	if(isSongInList(list, newSong->songName)){
 		songNameDuplicate(newSong->songName);
 		free(newSong->songName);
@@ -231,13 +229,20 @@ Node* insertIntoOrderedList(Node* list){
 			return list;
 		}
 	} else {
+		Node *previous = NULL;
 		Node *temp = list;
-		while(temp->nextNode != NULL) {
-			if(strcmp(newSong->songName, temp->nextNode->songName) < 0){
-				newSong->nextNode = temp->nextNode;
-				temp->nextNode = newSong;
-				return list;
+		while(temp != NULL) {
+			if(strcmp(newSong->songName, temp->songName) < 0){
+				
+				newSong->nextNode = temp;
+				if(previous != NULL){
+					previous->nextNode = newSong;
+					return list;
+				} else {
+					return newSong;
+				}
 			}
+			previous = temp;
 			temp = temp->nextNode;
 		}
 		temp->nextNode = newSong;
