@@ -33,7 +33,6 @@ bool isSongInList(Node* list, char *songName);
 Node* insertIntoOrderedList(Node* list);
 Node* deleteNode(Node* list, char *songName);
 Node* deleteList(Node* list);
-Node* newNode(Node* nextNode, char* songName, char *artist, char *genre);
 Node* findNodeByName(Node *list, char *songName);
 void printSearchedSong(Node* list, char *songName);
 void printList(Node* list);
@@ -175,7 +174,7 @@ void printMusicLibraryTitle(void) {
 bool isSongInList(Node* list, char *songName){
 	Node* currentNode = list;
 	while(currentNode != NULL){
-		if(strcmp(songName, list->songName) == 0)
+		if(strcmp(songName, currentNode->songName) == 0)
 			return true;
 		currentNode = currentNode->nextNode;
 	}
@@ -185,38 +184,28 @@ bool isSongInList(Node* list, char *songName){
 /**
  * @brief Inserts a valid song into a linkedlist according to alphanumeric order
  * @param list
- * @param songName
- * @param artist
- * @param genre
  * @return 
  */
 Node* insertIntoOrderedList(Node* list){
 	Node *newSong = (Node *)malloc(sizeof(Node));
 	
-	char tempString[MAX_LENGTH+1];
+	char tempString[MAX_LENGTH+1]; // User input
+	// Allocate memory for songName
 	inputStringFromUser("Song name", tempString, MAX_LENGTH);
 	newSong->songName = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
 	strcpy(newSong->songName, tempString);
 	
+	// Allocate memory for artist
 	inputStringFromUser("Artist", tempString, MAX_LENGTH);
 	newSong->artist = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
 	strcpy(newSong->artist, tempString);
 	
+	// Allocate memory for genre
 	inputStringFromUser("Genre", tempString, MAX_LENGTH);
 	newSong->genre = (char *)malloc(sizeof(char) * (strlen(tempString)+1) );
 	strcpy(newSong->genre, tempString);
 	
-	newSong->nextNode = NULL;
-	
-	// I could have put all string initializations wrapped in the if statement so I wouldnt need to use free().
-	if(isSongInList(list, newSong->songName)){
-		songNameDuplicate(newSong->songName);
-		free(newSong->songName);
-		free(newSong->artist);
-		free(newSong->genre);
-		free(newSong);
-		return list;
-	}
+	newSong->nextNode = NULL; // nextNode needs to be initialized
 	
 	if(list == NULL){
 		return newSong;
@@ -224,6 +213,7 @@ Node* insertIntoOrderedList(Node* list){
 		Node *previous = NULL;
 		Node *temp = list;
 		while(temp != NULL) {
+			// Go through the entire linked list. Compare songnames using strcmp
 			if(strcmp(newSong->songName, temp->songName) < 0){
 				
 				newSong->nextNode = temp;
@@ -233,11 +223,19 @@ Node* insertIntoOrderedList(Node* list){
 				} else {
 					return newSong;
 				}
+			// A a songname of similar spelling to the new songname will come before a songname with spelling that comes after the new songname
+			} else if(strcmp(newSong->songName, temp->songName) == 0) {
+				songNameDuplicate(newSong->songName);
+				free(newSong->songName);
+				free(newSong->artist);
+				free(newSong->genre);
+				free(newSong);
+				return list;
 			}
 			previous = temp;
 			temp = temp->nextNode;
 		}
-		previous->nextNode = newSong;
+		previous->nextNode = newSong; // Adds newSong to tail since previous is the last node in the list
 		return list;
 	}
 }
@@ -255,13 +253,15 @@ Node* deleteNode(Node* list, char *songName){
 	while(currentNode != NULL) {
 		if(strcmp(currentNode->songName, songName) == 0){
 			songNameDeleted(currentNode->songName);
+			// Free all the strings in the node
 			free(currentNode->songName);
 			free(currentNode->artist);
 			free(currentNode->genre);
-			if(previous != NULL){
+			
+			if(previous != NULL){ // If currentNode is not the head
 				previous->nextNode = currentNode->nextNode;
 				free(currentNode);
-			}else{
+			}else{ // If it is the head just remove it, no links need to be rebuilt
 				free(currentNode);
 			}
 			return list;
@@ -276,29 +276,18 @@ Node* deleteNode(Node* list, char *songName){
 Node* deleteList(Node* list){
 	Node* currentNode = list;
 	
-	while(currentNode != NULL) {
+	while(currentNode != NULL) { // Starting at head, free each node sequentially
 		songNameDeleted(currentNode->songName);
+		// Free all strings
 		free(currentNode->songName);
 		free(currentNode->artist);
 		free(currentNode->genre);
 		currentNode = currentNode->nextNode;
+		// Free the previous node, which is pointed to by list
 		free(list);
 		list = currentNode;
 	}
 	return list;
-}
-
-Node* newNode(Node* nextNode, char *songName, char *artist, char *genre){
-	Node *newSong = (Node *)malloc(sizeof(Node));
-	if(newSong == NULL){
-		printf("Error - out of memory\n");
-		exit(EXIT_FAILURE);
-	}
-	newSong->songName = songName;
-	newSong->artist = artist;
-	newSong->genre = genre;
-	newSong->nextNode = nextNode;
-	return newSong;
 }
 
 Node* findNodeByName(Node *list, char *songName){
@@ -312,10 +301,10 @@ Node* findNodeByName(Node *list, char *songName){
 }
 
 void printSearchedSong(Node* list, char *songName){
-	Node *song = findNodeByName(list, songName);
-	if(song != NULL){
+	Node *songSearch = findNodeByName(list, songName); // I wanted to build a helper function to find a node by songName, but it was only implemented once
+	if(songSearch != NULL){
 		songNameFound(songName);
-		printf("\n%s\n%s\n%s\n", song->songName, song->artist, song->genre);
+		printf("\n%s\n%s\n%s\n", songSearch->songName, songSearch->artist, songSearch->genre);
 	}else{
 		songNameNotFound(songName);
 	}
