@@ -118,7 +118,8 @@ void printLibrary(Song library[], int size) {
         printMusicLibraryEmpty();
     else {
         printMusicLibraryTitle();
-        for(int i = 0; i < size; i ++)
+		int i;
+        for(i = 0; i < size; i ++)
             printf("\n%s\n%s\n%s\n",
                     library[i].songName,
                     library[i].artist,
@@ -156,16 +157,16 @@ void cocktailSort(Song library[], int size) {
         } else {
             for (i = top; i > bottom; i--) {
 
-              // set shouldSwap to true if song (i-1) should go after song i
-              //
+				// set shouldSwap to true if song (i-1) should go after song i
+				//
 				shouldSwap = ( strcmp(library[i-1].artist, library[i].artist) > 0 );
 
-              if (shouldSwap) {
-                  Song temp = library[i-1];
-                  library[i-1] = library[i];
-                  library[i] = temp;
-                  sorted = false;
-              }
+				if (shouldSwap) {
+					Song temp = library[i-1];
+					library[i-1] = library[i];
+					library[i] = temp;
+					sorted = false;
+				}
             }
         
             bottom++;
